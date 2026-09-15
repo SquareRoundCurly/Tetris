@@ -1,0 +1,144 @@
+{
+  "systems": [
+    {
+      "Atlas::Systems::GraphicsSystem": {
+        "context": 2,
+        "pipeline": "atlas:unlit"
+      }
+    }
+  ],
+  "entities": [
+    {
+      "id": 0,
+      "name": "Tetris Camera",
+      "canvas": { "bitmask": 2 },
+      "transform": { "position": [0, 0, 10] },
+      "camera": {
+        "projection": "orthographic",
+        "target": [0, 0, 0],
+        "width": 14,
+        "height": 23,
+        "near": 0.1,
+        "far": 100
+      }
+    },
+    {
+      "id": 1,
+      "name": "Tetris Game",
+      "script": { "source": "scripts/main.js" }
+    },
+    {
+      "id": 2,
+      "name": "10 by 20 playfield",
+      "canvas": { "bitmask": 2 },
+      "transform": {
+        "position": [0, 0, 0],
+        "scale": [9.55, 18.55, 1]
+      },
+      "drawable": {
+        "shape": "quad",
+        "color": [0.015, 0.025, 0.045, 1]
+      }
+    },
+    {
+      "id": 20,
+      "name": "Tetris state pending",
+      "canvas": { "bitmask": 2 },
+      "transform": {
+        "position": [0, 10.05, 1],
+        "scale": [9.4, 0.42, 1]
+      },
+      "drawable": {
+        "shape": "quad",
+        "color": [0.12, 0.72, 0.92, 1]
+      }
+    },
+    {
+      "id": 10,
+      "name": "Move left",
+      "canvas": { "bitmask": 2 },
+      "transform": {
+        "position": [-5, -10.35, 2],
+        "rotation": [0, 0, 90],
+        "scale": [1.3, 1.3, 1]
+      },
+      "drawable": {
+        "shape": "triangle",
+        "color": [0.18, 0.55, 0.96, 1]
+      },
+      "pointer": { "enabled": true }
+    },
+    {
+      "id": 11,
+      "name": "Rotate",
+      "canvas": { "bitmask": 2 },
+      "transform": {
+        "position": [-3, -10.35, 2],
+        "scale": [1.3, 1.3, 1]
+      },
+      "drawable": {
+        "shape": "circle",
+        "color": [0.72, 0.34, 0.96, 1]
+      },
+      "pointer": { "enabled": true }
+    },
+    {
+      "id": 12,
+      "name": "Soft drop",
+      "canvas": { "bitmask": 2 },
+      "transform": {
+        "position": [-1, -10.35, 2],
+        "rotation": [0, 0, 180],
+        "scale": [1.3, 1.3, 1]
+      },
+      "drawable": {
+        "shape": "triangle",
+        "color": [0.2, 0.82, 0.58, 1]
+      },
+      "pointer": { "enabled": true }
+    },
+    {
+      "id": 13,
+      "name": "Hard drop",
+      "canvas": { "bitmask": 2 },
+      "transform": {
+        "position": [1, -10.35, 2],
+        "scale": [1.3, 1.3, 1]
+      },
+      "drawable": {
+        "shape": "quad",
+        "color": [0.98, 0.64, 0.14, 1]
+      },
+      "pointer": { "enabled": true }
+    },
+    {
+      "id": 14,
+      "name": "Move right",
+      "canvas": { "bitmask": 2 },
+      "transform": {
+        "position": [3, -10.35, 2],
+        "rotation": [0, 0, -90],
+        "scale": [1.3, 1.3, 1]
+      },
+      "drawable": {
+        "shape": "triangle",
+        "color": [0.18, 0.55, 0.96, 1]
+      },
+      "pointer": { "enabled": true }
+    },
+    {
+      "id": 15,
+      "name": "Reset",
+      "canvas": { "bitmask": 2 },
+      "transform": {
+        "position": [5, -10.35, 2],
+        "scale": [1.3, 1.3, 1]
+      },
+      "drawable": {
+        "shape": "circle",
+        "color": [0.92, 0.24, 0.28, 1]
+      },
+      "pointer": { "enabled": true }
+    }
+  ]
+}

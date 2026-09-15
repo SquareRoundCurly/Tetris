@@ -1,0 +1,14 @@
+{
+  "name": "pocketrealms-tetris",
+  "version": "0.2.0",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "runtime": "node tools/runtime.mjs",
+    "test": "node --test tests/runtime.test.mjs",
+    "test:browser": "playwright test -c tests/playwright.config.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.62.0"
+  }
+}

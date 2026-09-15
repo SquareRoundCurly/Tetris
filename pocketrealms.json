@@ -1,0 +1,23 @@
+{
+  "format": 1,
+  "module": "tetris",
+  "version": "0.2.0",
+  "title": "Tetris",
+  "summary": "A falling-block puzzle. Play with keyboard or touch; pause and resume your game.",
+  "runtime": {
+    "kind": "atlas-web",
+    "build": "2fc2f81246d85e8ffa164bc1fa4805ccad19bc771ad167eda99dda73590dfcf9"
+  },
+  "entry": "game.json",
+  "include": [
+    "game.json",
+    "scene/**",
+    "scripts/**"
+  ],
+  "capabilities": [
+    "session.save"
+  ],
+  "save": {
+    "schema": 1
+  }
+}

@@ -1,0 +1,15 @@
+<!doctype html><html><head><meta charset="utf-8"><title>Tetris playtest</title>
+<style>html,body,#game{margin:0;width:100%;height:100%;background:#080d17}</style>
+</head><body><div id="game"></div><script type="module">
+const { runtime: { build } } = await (await fetch('/pocketrealms.json')).json()
+const { loadBrowserRuntime, mountBrowserGame } = await import(`/.runtime/${build}/host.js`)
+const runtime = await loadBrowserRuntime('/.runtime', build)
+window.hostErrors = []
+window.mountTestGame = async (sources, save = null) => {
+  window.gameHost?.close()
+  const files = new Map(Object.entries(sources).map(([name, text]) => [name, new TextEncoder().encode(text)]))
+  window.gameHost = mountBrowserGame({ container: document.querySelector('#game'), runtime, files, save,
+    onError: (error) => window.hostErrors.push(error.message) })
+  await window.gameHost.ready
+}
+</script></body></html>
