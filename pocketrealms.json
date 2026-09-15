@@ -1,7 +1,7 @@
 {
   "format": 1,
   "module": "tetris",
-  "version": "0.2.0",
+  "version": "0.2.1",
   "title": "Tetris",
   "summary": "A falling-block puzzle. Play with keyboard or touch; pause and resume your game.",
   "runtime": {

@@ -49,8 +49,14 @@ const STANDARD_PIECE_DEFINITIONS = [
   },
 ]
 
-const CUSTOM_PIECE_DEFINITIONS = []
-const PIECE_SEQUENCE = ['I', 'T', 'O', 'L', 'J', 'S', 'Z']
+const CUSTOM_PIECE_DEFINITIONS = [
+  {
+    key: 'P',
+    color: [0.96, 0.34, 0.65, 1],
+    cells: [[-1, -1], [-1, 0], [0, 0], [-1, 1], [0, 1]],
+  },
+]
+const PIECE_SEQUENCE = ['I', 'P', 'T', 'O', 'L', 'J', 'S', 'Z']
 const PIECES = new Map(
   [...STANDARD_PIECE_DEFINITIONS, ...CUSTOM_PIECE_DEFINITIONS]
     .map((definition) => [definition.key, definition]),

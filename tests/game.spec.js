@@ -58,6 +58,28 @@ test('touch controls hit the visible game entities', async ({ page }) => {
   await expect.poll(async () => (await state(page)).lines).toBe(1)
 })
 
+test('the new five-cell P piece rotates, stacks and resumes in the real browser', async ({ page }, testInfo) => {
+  const files = await sources()
+  await mount(page, files)
+  await canvas(page).focus()
+  await page.keyboard.press('Space')
+  await expect.poll(async () => (await state(page)).piece).toBe('P')
+  await page.keyboard.press('ArrowUp')
+  for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowLeft')
+  expect((await state(page)).x).toBe(1)
+  expect((await state(page)).rotation).toBe(1)
+  const saved = await page.evaluate(() => window.gameHost.snapshot())
+  await page.evaluate(({ files, saved }) => window.mountTestGame(files, saved), { files, saved })
+  expect(await page.evaluate(() => window.gameHost.snapshot())).toEqual(saved)
+  await canvas(page).focus()
+  await page.keyboard.press('Space')
+  const snapshot = await page.evaluate(() => window.gameHost.snapshot())
+  expect(snapshot.scripts[0].state.board.flat().filter((cell) => cell === 'P')).toHaveLength(5)
+  expect((await state(page)).piece).toBe('T')
+  await page.evaluate(() => window.gameHost.step(1))
+  await page.screenshot({ path: testInfo.outputPath('five-cell-piece.png') })
+})
+
 test('published script cannot read parent state, use local storage or fetch the app API', async ({ page }) => {
   const requests = []
   page.on('request', (request) => { if (request.url().includes('/api/forbidden')) requests.push(request.url()) })

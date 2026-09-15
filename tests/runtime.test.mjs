@@ -122,7 +122,7 @@ test('hard drop locks the first piece, clears one line, and advances sequence', 
   runtime.input({ type: 'keydown', key: ' ', code: 'Space' })
 
   assert.deepEqual(state(atlas), {
-    piece: 'T',
+    piece: 'P',
     x: 4,
     y: 18,
     rotation: 0,
@@ -202,4 +202,31 @@ test('save restores board, counters, falling piece and gravity timing with relea
   const invalid = structuredClone(saved)
   invalid.scripts[0].state.board[0][0] = 'unknown'
   assert.throws(() => next.runtime.restore(invalid), /Invalid Tetris save/)
+})
+
+test('five-cell P piece rotates against the wall, restores and locks all five cells', async () => {
+  const first = await loadTetris()
+  const press = (runtime, code) => {
+    runtime.input({ type: 'keydown', code })
+    runtime.input({ type: 'keyup', code })
+  }
+  press(first.runtime, 'Space')
+  assert.equal(state(first.atlas).piece, 'P')
+  press(first.runtime, 'ArrowUp')
+  for (let i = 0; i < 10; i++) press(first.runtime, 'ArrowLeft')
+  assert.equal(state(first.atlas).rotation, 1)
+  assert.equal(state(first.atlas).x, 1)
+  const saved = first.runtime.snapshot()
+  const resumed = await loadTetris()
+  resumed.runtime.restore(saved)
+  assert.deepEqual(resumed.runtime.snapshot(), saved)
+  for (const current of [first, resumed]) {
+    press(current.runtime, 'Space')
+    const snapshot = current.runtime.snapshot().scripts[0].state
+    assert.equal(snapshot.board.flat().filter((cell) => cell === 'P').length, 5)
+    assert.equal(snapshot.activePiece.key, 'T')
+    assert.equal(snapshot.lockedPieces, 2)
+    assert.equal(snapshot.clearedLines, 1)
+  }
+  assert.deepEqual(resumed.runtime.snapshot(), first.runtime.snapshot())
 })
