@@ -1,7 +1,7 @@
 {
   "cli": {
-    "version": "0.1.0",
-    "path": "pocketrealms-0.1.0-py3-none-any.whl",
-    "sha256": "95bb924023c38e76a59aab893d0ea8fafedf549d8f17d3ac8d8341acff933650"
+    "version": "0.2.0",
+    "path": "pocketrealms-0.2.0-py3-none-any.whl",
+    "sha256": "afc5e98c2849b18ca8001a2bd62128f5ac4f167197ca68c0e81c08d341c78f38"
   }
 }
