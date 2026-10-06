@@ -4,6 +4,12 @@ A browser game published to PocketRealms. This repository owns the gameplay,
 scene, package manifest and tests. It needs no PocketRealms checkout, backend
 workspace, or cloud account to build and playtest.
 
+The local **0.3.0** release declares its six generic buttons and keyboard/widget
+mappings in `inputs.json`. Atlas renders the controls and resolves holds and
+repeat timing; the game consumes `game.input` and `onControl`. Publish the pinned
+supporting runtime and CLI 0.3.0 before publishing this release or downloading
+those artifacts with the commands below.
+
 Use Node 22 and Python 3.12:
 
 ```sh

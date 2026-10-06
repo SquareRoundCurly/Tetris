@@ -8,7 +8,7 @@ const types = { '.js':'text/javascript', '.json':'application/json', '.html':'te
 createServer(async (request, response) => {
   try {
     const name = decodeURIComponent(new URL(request.url, 'http://localhost').pathname)
-    if (!/^\/(?:tests\/host\.html|\.runtime\/|pocketrealms\.json|game\.json|scene\/|scripts\/)/.test(name)) throw new Error('Not found')
+    if (!/^\/(?:tests\/host\.html|\.runtime\/|pocketrealms\.json|game\.json|inputs\.json|scene\/|scripts\/)/.test(name)) throw new Error('Not found')
     const filename = path.resolve(root, '.' + name)
     if (!filename.startsWith(root + path.sep)) throw new Error('Not found')
     const data = await readFile(filename)

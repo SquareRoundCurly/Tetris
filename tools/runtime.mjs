@@ -19,7 +19,7 @@ if (manifest.build !== build || sha256(JSON.stringify(manifest.files)) !== build
 const directory = path.join(root, '.runtime', build)
 await mkdir(directory, { recursive: true })
 for (const file of manifest.files) {
-  if (!['runtime.js','runtime.css','host.js','test-runtime.js','THIRD_PARTY_NOTICES.md'].includes(file.path)) throw new Error('Unexpected runtime artifact')
+  if (!['runtime.js','runtime.css','host.js','test-runtime.js','THIRD_PARTY_NOTICES.md','inputs.d.ts','INPUTS.md'].includes(file.path)) throw new Error('Unexpected runtime artifact')
   const bytes = await download(file.path)
   if (bytes.length !== file.size || sha256(bytes) !== file.sha256) throw new Error('Runtime file checksum failed')
   await writeFile(path.join(directory, file.path), bytes)

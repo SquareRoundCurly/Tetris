@@ -286,26 +286,13 @@ function rotate(game) {
   }
 }
 
-function keyboardCode(event) {
-  if (event.code) return event.code
-  return {
-    ArrowLeft: 'ArrowLeft',
-    ArrowRight: 'ArrowRight',
-    ArrowDown: 'ArrowDown',
-    ArrowUp: 'ArrowUp',
-    ' ': 'Space',
-    r: 'KeyR',
-    R: 'KeyR',
-  }[event.key] ?? event.key
-}
-
 function performAction(action, game) {
   if (action === 'left') tryMove(game, -1, 0)
   if (action === 'right') tryMove(game, 1, 0)
   if (action === 'soft-drop') stepDown(game)
   if (action === 'rotate') rotate(game)
   if (action === 'hard-drop') hardDrop(game)
-  if (action === 'reset') reset(game)
+  if (action === 'reset') game.reset()
 }
 
 export default {
@@ -352,35 +339,13 @@ export default {
     reset(game)
   },
 
-  onKeyDown(event, game) {
-    const code = keyboardCode(event)
-    if (event.repeat && ['ArrowDown', 'ArrowUp', 'Space', 'KeyR'].includes(code)) return
-    const action = {
-      ArrowLeft: 'left',
-      ArrowRight: 'right',
-      ArrowDown: 'soft-drop',
-      ArrowUp: 'rotate',
-      Space: 'hard-drop',
-      KeyR: 'reset',
-    }[code]
-    if (action) performAction(action, game)
-  },
-
-  onPointerDown(event, game) {
-    const action = {
-      10: 'left',
-      11: 'rotate',
-      12: 'soft-drop',
-      13: 'hard-drop',
-      14: 'right',
-      15: 'reset',
-    }[event.hitEntity]
-    if (action) performAction(action, game)
+  onControl(event, game) {
+    if (event.type === 'press' || event.type === 'repeat') performAction(event.input, game)
   },
 
   update(deltaSeconds, game) {
     if (!activePiece || gameOver) return
-    const softDrop = game.input?.isKeyDown('ArrowDown') === true
+    const softDrop = game.input.value('soft-drop') === true
     if (softDrop !== softDropActive) {
       elapsedSeconds = 0
       softDropActive = softDrop

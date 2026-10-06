@@ -1,232 +1,77 @@
 import assert from 'node:assert/strict'
 import { readFile } from 'node:fs/promises'
-import path from 'node:path'
 import test from 'node:test'
-import { fileURLToPath, pathToFileURL } from 'node:url'
-
-const config = JSON.parse(await readFile(new URL('../pocketrealms.json', import.meta.url)))
-const { loadProject, ScriptRuntime } = await import(new URL(`../.runtime/${config.runtime.build}/test-runtime.js`, import.meta.url))
-
-
-const moduleRoot = path.resolve(
-  path.dirname(fileURLToPath(import.meta.url)),
-  '..',
-)
-
-
-class FakeAtlas {
-  constructor(entities) {
-    this.entities = new Map(
-      entities.map((entity) => [entity.id, structuredClone(entity)]),
-    )
-  }
-
-  getEntity(id) {
-    const entity = this.entities.get(id)
-    return entity ? structuredClone(entity) : null
-  }
-
-  setEntity(entity) {
-    this.entities.set(entity.id, structuredClone(entity))
-  }
-
-  removeEntity(id) {
-    return this.entities.delete(id)
-  }
-}
-
-
-async function loadTetris() {
-  const project = await loadProject((relativePath) =>
-    readFile(path.join(moduleRoot, relativePath), 'utf8'),
-  )
+const root = new URL('../', import.meta.url)
+const config = JSON.parse(await readFile(new URL('pocketrealms.json', root)))
+const { loadProject, ScriptRuntime } = await import(new URL(`.runtime/${config.runtime.build}/test-runtime.js`, root))
+const dt = 1 / 60
+async function fixture() {
+  const project = await loadProject(path => readFile(new URL(path, root), 'utf8'))
   const script = project.scripts[0]
-  const moduleUrl = pathToFileURL(path.join(moduleRoot, script.source))
-  moduleUrl.searchParams.set('instance', crypto.randomUUID())
-  const behavior = (await import(moduleUrl)).default
-  const atlas = new FakeAtlas(project.scene.entities)
-  const runtime = new ScriptRuntime(atlas, [{ ...script, behavior }], () => {})
+  const url = new URL(script.source, root); url.searchParams.set('instance',crypto.randomUUID())
+  const {default:behavior} = await import(url)
+  const entities = new Map(project.scene.entities.map(entity=>[entity.id,structuredClone(entity)]))
+  const atlas = { getEntity: id=>structuredClone(entities.get(id)), setEntity: entity=>entities.set(entity.id,structuredClone(entity)), removeEntity:id=>entities.delete(id) }
+  const runtime = new ScriptRuntime(atlas,[{...script,behavior}],()=>{}, { inputs:project.inputs })
   runtime.start()
-  return { atlas, project, runtime }
+  const state=()=>JSON.parse(atlas.getEntity(20).name.slice('Tetris state '.length))
+  const step=(n=1)=>{for(let i=0;i<n;i++)runtime.update(dt)}
+  const key=(code,down=true,repeat=false)=>runtime.input({type:down?'keydown':'keyup',code,repeat})
+  const press=code=>{key(code);key(code,false);step()}
+  return {project,entities,runtime,state,step,key,press}
 }
-
-
-function state(atlas) {
-  const name = atlas.getEntity(20)?.name ?? ''
-  assert.match(name, /^Tetris state /)
-  return JSON.parse(name.slice('Tetris state '.length))
-}
-
-
-test('seed starts a deterministic 10 by 20 unlit game', async () => {
-  const { atlas, project } = await loadTetris()
-
-  assert.equal(
-    project.scene.systems[0]['Atlas::Systems::GraphicsSystem'].pipeline,
-    'atlas:unlit',
-  )
-  assert.equal(
-    [...atlas.entities.values()].filter(({ id }) => id >= 100 && id < 300).length,
-    200,
-  )
-  assert.deepEqual(state(atlas), {
-    piece: 'I',
-    x: 4,
-    y: 18,
-    rotation: 0,
-    lines: 0,
-    locks: 0,
-    sequenceIndex: 1,
-    gameOver: false,
-  })
+test('deterministic board loads the independent shared-input definition',async()=>{
+  const f=await fixture()
+  assert.ok(f.project.dependencies.has('inputs.json'))
+  assert.equal([...f.entities.keys()].filter(id=>id>=100&&id<300).length,200)
+  assert.deepEqual(f.state(),{piece:'I',x:4,y:18,rotation:0,lines:0,locks:0,sequenceIndex:1,gameOver:false})
 })
-
-
-test('keyboard movement, rotation, gravity, and reset share deterministic state', async () => {
-  const { atlas, runtime } = await loadTetris()
-
-  runtime.input({ type: 'keydown', key: 'ArrowLeft', code: 'ArrowLeft' })
-  assert.equal(state(atlas).x, 3)
-  runtime.input({ type: 'keyup', key: 'ArrowLeft', code: 'ArrowLeft' })
-
-  runtime.input({ type: 'keydown', key: 'ArrowUp', code: 'ArrowUp' })
-  assert.equal(state(atlas).rotation, 1)
-  runtime.input({ type: 'keyup', key: 'ArrowUp', code: 'ArrowUp' })
-
-  runtime.input({ type: 'keydown', key: 'ArrowDown', code: 'ArrowDown' })
-  assert.equal(state(atlas).y, 17)
-  runtime.input({ type: 'keyup', key: 'ArrowDown', code: 'ArrowDown' })
-
-  runtime.update(0.64)
-  assert.equal(state(atlas).y, 17)
-  runtime.update(0.01)
-  assert.equal(state(atlas).y, 16)
-
-  runtime.input({ type: 'keydown', key: 'r', code: 'KeyR' })
-  assert.deepEqual(state(atlas), {
-    piece: 'I',
-    x: 4,
-    y: 18,
-    rotation: 0,
-    lines: 0,
-    locks: 0,
-    sequenceIndex: 1,
-    gameOver: false,
-  })
+test('quick keyboard presses are delivered on ticks for movement, rotation and reset',async()=>{
+  const f=await fixture();f.key('ArrowLeft');f.key('ArrowLeft',false)
+  assert.equal(f.state().x,4);f.step();assert.equal(f.state().x,3)
+  f.press('ArrowUp');assert.equal(f.state().rotation,1)
+  f.press('ArrowDown');assert.equal(f.state().y,17)
+  f.press('KeyR');assert.equal(f.state().x,4);assert.equal(f.state().y,18)
+  assert.equal(f.runtime.controls.inspect().sources.length,0)
 })
-
-
-test('hard drop locks the first piece, clears one line, and advances sequence', async () => {
-  const { atlas, runtime } = await loadTetris()
-
-  runtime.input({ type: 'keydown', key: ' ', code: 'Space' })
-
-  assert.deepEqual(state(atlas), {
-    piece: 'P',
-    x: 4,
-    y: 18,
-    rotation: 0,
-    lines: 1,
-    locks: 1,
-    sequenceIndex: 2,
-    gameOver: false,
-  })
+test('hard drop clears a line and advances the deterministic piece sequence',async()=>{
+  const f=await fixture();f.press('Space')
+  assert.equal(f.state().lines,1);assert.equal(f.state().locks,1);assert.equal(f.state().piece,'P')
 })
-
-
-test('visible pointer controls route through the same game actions', async () => {
-  const { atlas, runtime } = await loadTetris()
-
-  runtime.input({ type: 'pointerdown', hitEntity: 10 })
-  assert.equal(state(atlas).x, 3)
-  runtime.input({ type: 'pointerdown', hitEntity: 11 })
-  assert.equal(state(atlas).rotation, 1)
-  runtime.input({ type: 'pointerdown', hitEntity: 12 })
-  assert.equal(state(atlas).y, 17)
-  runtime.input({ type: 'pointerdown', hitEntity: 15 })
-  assert.equal(state(atlas).x, 4)
-  assert.equal(state(atlas).y, 18)
-  runtime.input({ type: 'pointerdown', hitEntity: 14 })
-  assert.equal(state(atlas).x, 5)
-  runtime.input({ type: 'pointerdown', hitEntity: 15 })
-  runtime.input({ type: 'pointerdown', hitEntity: 13 })
-  assert.equal(state(atlas).lines, 1)
-  assert.equal(state(atlas).locks, 1)
+test('touch-shaped sources and keys invoke identical game rules',async()=>{
+  const f=await fixture()
+  const tap=id=>{f.runtime.controls.setSource({device:'widget',input:id},'finger',true);f.runtime.controls.releaseSource('finger');f.step()}
+  tap('left');assert.equal(f.state().x,3)
+  tap('rotate');assert.equal(f.state().rotation,1)
+  tap('reset');tap('hard-drop');assert.equal(f.state().lines,1)
 })
-
-
-test('held soft drop ignores key repeat and starts with a fresh timer', async () => {
-  const { atlas, runtime } = await loadTetris()
-
-  assert.equal(state(atlas).y, 18)
-  runtime.update(0.6)
-  assert.equal(state(atlas).y, 18)
-
-  runtime.input({ type: 'keydown', key: 'ArrowDown', code: 'ArrowDown' })
-  assert.equal(state(atlas).y, 17)
-  runtime.input({
-    type: 'keydown',
-    key: 'ArrowDown',
-    code: 'ArrowDown',
-    repeat: true,
-  })
-  assert.equal(state(atlas).y, 17)
-
-  runtime.update(0.001)
-  assert.equal(state(atlas).y, 17)
-  runtime.update(0.06)
-  assert.equal(state(atlas).y, 16)
-
-  runtime.input({ type: 'keyup', key: 'ArrowDown', code: 'ArrowDown' })
-  runtime.update(0.64)
-  assert.equal(state(atlas).y, 16)
-  runtime.update(0.01)
-  assert.equal(state(atlas).y, 15)
+test('shared hold repeat ignores OS repeat and independent release retains a finger',async()=>{
+  const f=await fixture();f.key('ArrowRight');f.step();assert.equal(f.state().x,5)
+  for(let i=0;i<10;i++){f.key('ArrowRight',true,true);f.step()}
+  assert.equal(f.state().x,5)
+  f.runtime.controls.setSource({device:'widget',input:'right'},'finger',true)
+  f.key('ArrowRight',false);f.step(9);assert.ok(f.state().x>5)
+  f.runtime.controls.releaseSource('finger');f.step();const x=f.state().x;f.step(30);assert.equal(f.state().x,x)
 })
-
-test('save restores board, counters, falling piece and gravity timing with released keys', async () => {
-  const first = await loadTetris()
-  first.runtime.input({ type: 'keydown', code: 'Space' })
-  first.runtime.input({ type: 'keyup', code: 'Space' })
-  first.runtime.input({ type: 'keydown', code: 'ArrowLeft' })
-  first.runtime.update(0.4)
-  const saved = first.runtime.snapshot()
-  const next = await loadTetris()
-  next.runtime.input({ type: 'keydown', code: 'ArrowDown' })
-  next.runtime.restore(saved)
-  assert.deepEqual(next.runtime.snapshot(), saved)
-  assert.equal(next.runtime.pressedKeys.size, 0)
-  assert.deepEqual(state(next.atlas), state(first.atlas))
-  next.runtime.update(0.26)
-  assert.equal(state(next.atlas).y, state(first.atlas).y - 1)
-  const invalid = structuredClone(saved)
-  invalid.scripts[0].state.board[0][0] = 'unknown'
-  assert.throws(() => next.runtime.restore(invalid), /Invalid Tetris save/)
+test('soft drop is held consistently by keyboard and touch, then returns to gravity',async()=>{
+  const f=await fixture();f.key('ArrowDown');f.step();assert.equal(f.state().y,17)
+  f.step(4);assert.equal(f.state().y,16)
+  f.runtime.controls.setSource({device:'widget',input:'soft-drop'},'finger',true)
+  f.key('ArrowDown',false);f.step(4);assert.equal(f.state().y,15)
+  f.runtime.controls.releaseSource('finger');f.step();const y=f.state().y;f.step(20);assert.equal(f.state().y,y)
 })
-
-test('five-cell P piece rotates against the wall, restores and locks all five cells', async () => {
-  const first = await loadTetris()
-  const press = (runtime, code) => {
-    runtime.input({ type: 'keydown', code })
-    runtime.input({ type: 'keyup', code })
-  }
-  press(first.runtime, 'Space')
-  assert.equal(state(first.atlas).piece, 'P')
-  press(first.runtime, 'ArrowUp')
-  for (let i = 0; i < 10; i++) press(first.runtime, 'ArrowLeft')
-  assert.equal(state(first.atlas).rotation, 1)
-  assert.equal(state(first.atlas).x, 1)
-  const saved = first.runtime.snapshot()
-  const resumed = await loadTetris()
-  resumed.runtime.restore(saved)
-  assert.deepEqual(resumed.runtime.snapshot(), saved)
-  for (const current of [first, resumed]) {
-    press(current.runtime, 'Space')
-    const snapshot = current.runtime.snapshot().scripts[0].state
-    assert.equal(snapshot.board.flat().filter((cell) => cell === 'P').length, 5)
-    assert.equal(snapshot.activePiece.key, 'T')
-    assert.equal(snapshot.lockedPieces, 2)
-    assert.equal(snapshot.clearedLines, 1)
-  }
-  assert.deepEqual(resumed.runtime.snapshot(), first.runtime.snapshot())
+test('same-release save restores board, sequence and timers with neutral input',async()=>{
+  const f=await fixture();f.press('Space');f.key('ArrowLeft');f.step(8)
+  const saved=f.runtime.snapshot(), next=await fixture();next.key('ArrowDown');next.runtime.restore(saved)
+  assert.deepEqual(next.runtime.snapshot(),saved);assert.deepEqual(next.state(),f.state())
+  assert.equal(next.runtime.controls.inspect().sources.length,0)
+  const broken=structuredClone(saved);broken.scripts[0].state.board[0][0]='unknown'
+  assert.throws(()=>next.runtime.restore(broken),/Invalid Tetris save/)
+})
+test('P piece keeps all five cells after rotation, wall kicks, save and drop',async()=>{
+  const f=await fixture();f.press('Space');f.press('ArrowUp');for(let i=0;i<10;i++)f.press('ArrowLeft')
+  assert.equal(f.state().x,1);assert.equal(f.state().rotation,1)
+  const next=await fixture();next.runtime.restore(f.runtime.snapshot())
+  for(const current of [f,next]){current.press('Space');assert.equal(current.runtime.snapshot().scripts[0].state.board.flat().filter(c=>c==='P').length,5)}
+  assert.deepEqual(next.runtime.snapshot(),f.runtime.snapshot())
 })

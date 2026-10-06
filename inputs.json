@@ -1,0 +1,237 @@
+{
+  "version": 1,
+  "inputs": [
+    {
+      "id": "left",
+      "type": "button",
+      "label": "Left",
+      "icon": "\u2190",
+      "widget": {
+        "placement": "bottom-left",
+        "order": 0,
+        "size": 58,
+        "theme": {
+          "background": "#3479d2",
+          "foreground": "#ffffff",
+          "accent": "#62cce7",
+          "radius": "13px"
+        }
+      },
+      "repeat": {
+        "delay": 0.3,
+        "interval": 0.08
+      }
+    },
+    {
+      "id": "rotate",
+      "type": "button",
+      "label": "Rotate",
+      "icon": "\u21bb",
+      "widget": {
+        "placement": "bottom-center",
+        "order": 1,
+        "size": 58,
+        "theme": {
+          "background": "#8748bc",
+          "foreground": "#ffffff",
+          "accent": "#62cce7",
+          "radius": "13px"
+        }
+      }
+    },
+    {
+      "id": "soft-drop",
+      "type": "button",
+      "label": "Down",
+      "icon": "\u2193",
+      "widget": {
+        "placement": "bottom-center",
+        "order": 2,
+        "size": 58,
+        "theme": {
+          "background": "#369f82",
+          "foreground": "#ffffff",
+          "accent": "#62cce7",
+          "radius": "13px"
+        }
+      }
+    },
+    {
+      "id": "hard-drop",
+      "type": "button",
+      "label": "Drop",
+      "icon": "\u21d3",
+      "widget": {
+        "placement": "bottom-right",
+        "order": 3,
+        "size": 58,
+        "theme": {
+          "background": "#c98723",
+          "foreground": "#ffffff",
+          "accent": "#62cce7",
+          "radius": "13px"
+        }
+      }
+    },
+    {
+      "id": "right",
+      "type": "button",
+      "label": "Right",
+      "icon": "\u2192",
+      "widget": {
+        "placement": "bottom-right",
+        "order": 4,
+        "size": 58,
+        "theme": {
+          "background": "#3479d2",
+          "foreground": "#ffffff",
+          "accent": "#62cce7",
+          "radius": "13px"
+        }
+      },
+      "repeat": {
+        "delay": 0.3,
+        "interval": 0.08
+      }
+    },
+    {
+      "id": "reset",
+      "type": "button",
+      "label": "Reset",
+      "icon": "\u21ba",
+      "widget": {
+        "placement": "top-right",
+        "order": 5,
+        "size": 58,
+        "theme": {
+          "background": "#c94853",
+          "foreground": "#ffffff",
+          "accent": "#62cce7",
+          "radius": "13px"
+        }
+      }
+    }
+  ],
+  "mappings": [
+    {
+      "id": "left_key",
+      "from": {
+        "device": "key",
+        "code": "ArrowLeft"
+      },
+      "to": {
+        "input": "left"
+      }
+    },
+    {
+      "id": "left_widget",
+      "from": {
+        "device": "widget",
+        "input": "left"
+      },
+      "to": {
+        "input": "left"
+      }
+    },
+    {
+      "id": "rotate_key",
+      "from": {
+        "device": "key",
+        "code": "ArrowUp"
+      },
+      "to": {
+        "input": "rotate"
+      }
+    },
+    {
+      "id": "rotate_widget",
+      "from": {
+        "device": "widget",
+        "input": "rotate"
+      },
+      "to": {
+        "input": "rotate"
+      }
+    },
+    {
+      "id": "soft-drop_key",
+      "from": {
+        "device": "key",
+        "code": "ArrowDown"
+      },
+      "to": {
+        "input": "soft-drop"
+      }
+    },
+    {
+      "id": "soft-drop_widget",
+      "from": {
+        "device": "widget",
+        "input": "soft-drop"
+      },
+      "to": {
+        "input": "soft-drop"
+      }
+    },
+    {
+      "id": "hard-drop_key",
+      "from": {
+        "device": "key",
+        "code": "Space"
+      },
+      "to": {
+        "input": "hard-drop"
+      }
+    },
+    {
+      "id": "hard-drop_widget",
+      "from": {
+        "device": "widget",
+        "input": "hard-drop"
+      },
+      "to": {
+        "input": "hard-drop"
+      }
+    },
+    {
+      "id": "right_key",
+      "from": {
+        "device": "key",
+        "code": "ArrowRight"
+      },
+      "to": {
+        "input": "right"
+      }
+    },
+    {
+      "id": "right_widget",
+      "from": {
+        "device": "widget",
+        "input": "right"
+      },
+      "to": {
+        "input": "right"
+      }
+    },
+    {
+      "id": "reset_key",
+      "from": {
+        "device": "key",
+        "code": "KeyR"
+      },
+      "to": {
+        "input": "reset"
+      }
+    },
+    {
+      "id": "reset_widget",
+      "from": {
+        "device": "widget",
+        "input": "reset"
+      },
+      "to": {
+        "input": "reset"
+      }
+    }
+  ]
+}

@@ -3,7 +3,7 @@ import { readFile } from 'node:fs/promises'
 
 const seed = new URL('../', import.meta.url)
 async function sources() {
-  return Object.fromEntries(await Promise.all(['game.json', 'scene/scene.json', 'scripts/main.js'].map(async (name) => [name, await readFile(new URL(name, seed), 'utf8')])))
+  return Object.fromEntries(await Promise.all(['game.json', 'inputs.json', 'scene/scene.json', 'scripts/main.js'].map(async (name) => [name, await readFile(new URL(name, seed), 'utf8')])))
 }
 async function mount(page, files, save = null) {
   await page.goto('/tests/host.html')
@@ -16,6 +16,7 @@ async function state(page) {
     return JSON.parse(result.scene.entities[0].name.slice('Tetris state '.length))
   })
 }
+async function press(page, code) { await page.keyboard.press(code); await page.evaluate(() => window.gameHost.step(1)) }
 function canvas(page) { return page.frameLocator('iframe').getByLabel('Atlas game canvas') }
 
 test('isolated WASM Tetris plays, clears a line and restores the complete game before ticks', async ({ page }, testInfo) => {
@@ -23,9 +24,9 @@ test('isolated WASM Tetris plays, clears a line and restores the complete game b
   await mount(page, files)
   await expect(canvas(page)).toBeVisible()
   await canvas(page).focus()
-  await page.keyboard.press('Space')
+  await press(page, 'Space')
   await expect.poll(async () => (await state(page)).lines).toBe(1)
-  await page.keyboard.press('ArrowLeft')
+  await press(page, 'ArrowLeft')
   await page.evaluate(() => window.gameHost.step(17))
   const before = await state(page)
   const save = await page.evaluate(() => window.gameHost.snapshot())
@@ -36,12 +37,12 @@ test('isolated WASM Tetris plays, clears a line and restores the complete game b
   await page.evaluate(() => window.gameHost.step(24))
   expect((await state(page)).y).toBe(before.y - 1)
   await canvas(page).focus()
-  for (let i = 0; i < 22; i++) await page.keyboard.press('Space')
+  for (let i = 0; i < 22; i++) await press(page, 'Space')
   await expect.poll(async () => (await state(page)).gameOver).toBe(true)
-  await page.keyboard.press('r')
+  await press(page, 'r')
   expect((await state(page)).locks).toBe(0)
   await page.keyboard.down('ArrowDown')
-  expect(await page.evaluate(async () => (await window.gameHost.observe()).keys)).toContain('ArrowDown')
+  expect(await page.evaluate(async () => (await window.gameHost.observe()).inputs.values['soft-drop'])).toBe(true)
   await page.evaluate(() => window.gameHost.pause())
   expect(await page.evaluate(async () => (await window.gameHost.observe()).keys)).toEqual([])
   await page.keyboard.up('ArrowDown')
@@ -50,29 +51,52 @@ test('isolated WASM Tetris plays, clears a line and restores the complete game b
   expect(await page.evaluate(() => window.hostErrors)).toEqual([])
 })
 
-test('touch controls hit the visible game entities', async ({ page }) => {
+test('shared touch controls move, rotate, drop and hold through actual browser input', async ({ page }, testInfo) => {
   await mount(page, await sources())
-  const bounds = await canvas(page).boundingBox()
-  // The declared orthographic camera is 14 by 23; this viewport has that ratio.
-  await page.touchscreen.tap(bounds.x + bounds.width * (1 / 14 + 0.5), bounds.y + bounds.height * (0.5 + 10.35 / 23))
-  await expect.poll(async () => (await state(page)).lines).toBe(1)
+  const controls=page.frameLocator('iframe')
+  await controls.getByRole('button',{name:'Left',exact:true}).tap()
+  await page.evaluate(()=>window.gameHost.step(1))
+  expect((await state(page)).x).toBe(3)
+  await controls.getByRole('button',{name:'Rotate',exact:true}).tap()
+  await page.evaluate(()=>window.gameHost.step(1))
+  expect((await state(page)).rotation).toBe(1)
+  await controls.getByRole('button',{name:'Reset',exact:true}).tap()
+  await page.evaluate(()=>window.gameHost.step(1))
+  await controls.getByRole('button',{name:'Drop',exact:true}).tap()
+  await page.evaluate(()=>window.gameHost.step(1))
+  expect((await state(page)).lines).toBe(1)
+  const right=await controls.getByRole('button',{name:'Right',exact:true}).boundingBox()
+  const cdp=await page.context().newCDPSession(page)
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchStart',touchPoints:[{id:1,x:right.x+right.width/2,y:right.y+right.height/2}]})
+  await page.evaluate(()=>window.gameHost.step(32))
+  expect((await state(page)).x).toBeGreaterThan(5)
+  await cdp.send('Input.dispatchTouchEvent',{type:'touchEnd',touchPoints:[]})
+  await page.evaluate(()=>window.gameHost.step(1))
+  expect(await page.evaluate(async()=>(await window.gameHost.observe()).inputs.values.right)).toBe(false)
+  await page.setViewportSize({width:348,height:760})
+  await page.evaluate(()=>window.gameHost.step(1))
+  for (const name of ['Left','Right','Rotate','Down','Drop','Reset']) {
+    const box=await controls.getByRole('button',{name,exact:true}).boundingBox()
+    expect(box.width).toBeGreaterThanOrEqual(44);expect(box.x).toBeGreaterThanOrEqual(0);expect(box.x+box.width).toBeLessThanOrEqual(348)
+  }
+  await page.screenshot({path:testInfo.outputPath('shared-touch-controls.png')})
 })
 
 test('the new five-cell P piece rotates, stacks and resumes in the real browser', async ({ page }, testInfo) => {
   const files = await sources()
   await mount(page, files)
   await canvas(page).focus()
-  await page.keyboard.press('Space')
+  await press(page, 'Space')
   await expect.poll(async () => (await state(page)).piece).toBe('P')
-  await page.keyboard.press('ArrowUp')
-  for (let i = 0; i < 10; i++) await page.keyboard.press('ArrowLeft')
+  await press(page, 'ArrowUp')
+  for (let i = 0; i < 10; i++) await press(page, 'ArrowLeft')
   expect((await state(page)).x).toBe(1)
   expect((await state(page)).rotation).toBe(1)
   const saved = await page.evaluate(() => window.gameHost.snapshot())
   await page.evaluate(({ files, saved }) => window.mountTestGame(files, saved), { files, saved })
   expect(await page.evaluate(() => window.gameHost.snapshot())).toEqual(saved)
   await canvas(page).focus()
-  await page.keyboard.press('Space')
+  await press(page, 'Space')
   const snapshot = await page.evaluate(() => window.gameHost.snapshot())
   expect(snapshot.scripts[0].state.board.flat().filter((cell) => cell === 'P')).toHaveLength(5)
   expect((await state(page)).piece).toBe('T')

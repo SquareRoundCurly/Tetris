@@ -1,5 +1,7 @@
 node_modules/
 .runtime/
+.venv/
+dist/
 test-results/
 playwright-report/
 .env
